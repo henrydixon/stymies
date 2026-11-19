@@ -78,6 +78,9 @@ td.r,th.r{text-align:right}
 .btnrow{display:flex;gap:8px;margin-top:10px}
 .btnrow button{flex:1}
 .addrow{display:flex;gap:8px;margin-top:10px}
+.gcard.cur{border-color:var(--green-d)}
+.gopen{display:block;width:100%;text-align:left;background:none;border:0;padding:0;font-weight:400}
+.gtop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:17px}
 </style>
 </head>
 <body>
@@ -88,10 +91,15 @@ td.r,th.r{text-align:right}
 const KEY='stymies.v1';
 const MAXQUICK=6;
 let S=load()||fresh();
-let view=S.round?'play':'setup';
+// migrate the single-game format
+if(!Array.isArray(S.games)){S.games=S.round?[Object.assign({name:'Game 1'},S.round)]:[];S.active=S.round?S.round.id:null;S.seq=S.games.length;delete S.round}
+if(typeof S.seq!=='number')S.seq=S.games.length;
+if(typeof S.gname!=='string')S.gname='';
+Object.defineProperty(S,'round',{get(){return this.games.find(g=>g.id===this.active)||null},enumerable:false,configurable:true});
+let view=S.round?'play':(S.games.length?'games':'setup');
 let armed=null, armTimer=null;
 
-function fresh(){return{names:['','','',''],rate:1,draw:true,honors:true,round:null,history:[]}}
+function fresh(){return{names:['','','',''],rate:1,draw:true,honors:true,games:[],active:null,seq:0,gname:'',history:[]}}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));return s&&s.names?s:null}catch(e){return null}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -101,9 +109,16 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
 // ---------- round logic ----------
-function startRound(players){
-  const order=S.draw?shuffle(players.map(p=>p.id)):players.map(p=>p.id);
-  S.round={id:uid(),started:Date.now(),rate:S.rate,honors:S.honors,players,startOrder:order,holes:[{}],cur:0};
+function startRound(players,opts){
+  opts=opts||{};
+  const draw=opts.draw!==undefined?opts.draw:S.draw;
+  const order=draw?shuffle(players.map(p=>p.id)):players.map(p=>p.id);
+  const g={id:opts.id||uid(),name:opts.name,started:Date.now(),
+    rate:opts.rate!==undefined?opts.rate:S.rate,honors:opts.honors!==undefined?opts.honors:S.honors,draw,
+    players,startOrder:order,holes:[{}],cur:0};
+  const i=S.games.findIndex(x=>x.id===g.id);
+  if(i>=0)S.games[i]=g;else S.games.push(g);
+  S.active=g.id;
   save();view='play';render();
   const first=players.find(p=>p.id===order[0]);
   toast(first.name+' putts first.');
@@ -154,7 +169,7 @@ function archive(){
   if(playedHoles(R)===0)return;
   const t=totals(R);
   S.history.unshift({
-    date:Date.now(),rate:R.rate,holes:playedHoles(R),
+    name:R.name,date:Date.now(),rate:R.rate,holes:playedHoles(R),
     players:R.players.map(p=>({name:p.name,strokes:t[p.id].strokes,money:t[p.id].money})),
     payments:settle(t).map(x=>({from:nameOf(R,x.from),to:nameOf(R,x.to),amt:x.amt}))
   });
@@ -163,18 +178,27 @@ function archive(){
 function playAgain(){
   const R=S.round;archive();
   const players=R.players.map(p=>({id:p.id,name:p.name}));
-  S.rate=R.rate;
-  startRound(players);
+  startRound(players,{id:R.id,name:R.name,rate:R.rate,honors:R.honors,draw:R.draw!==undefined?R.draw:S.draw});
 }
-function newGame(){
+// save the active game to Past games and take it off the games list
+function finishGame(){
   const R=S.round;archive();
   if(R){S.names=R.players.map(p=>p.name);S.rate=R.rate}
-  S.round=null;save();view='setup';render();
+  S.games=S.games.filter(g=>g!==R);S.active=null;save();
+  view=S.games.length?'games':'setup';render();
+}
+function newSetup(){
+  S.active=null;S.gname='';save();view='setup';render();window.scrollTo(0,0);
+}
+function openGame(id){S.active=id;save();view='play';render();window.scrollTo(0,0)}
+function deleteGame(id){
+  S.games=S.games.filter(g=>g.id!==id);if(S.active===id)S.active=null;save();
+  view=S.games.length?'games':'setup';render();toast('Game deleted.');
 }
 function resetRound(){
   const R=S.round;
   R.holes=[{}];R.cur=0;R.started=Date.now();
-  if(S.draw)R.startOrder=shuffle(R.players.map(p=>p.id));
+  if(R.draw!==undefined?R.draw:S.draw)R.startOrder=shuffle(R.players.map(p=>p.id));
   save();view='play';render();
   toast('Scores cleared. '+nameOf(R,holeOrder(R,0)[0])+' putts first.');
 }
@@ -197,15 +221,43 @@ function render(){
   else if(view==='play')app.innerHTML=vPlay();
   else if(view==='settle')app.innerHTML=vSettle();
   else if(view==='history')app.innerHTML=vHistory();
+  else if(view==='games')app.innerHTML=vGames();
   bind();
+}
+
+function gameSummary(R){
+  const t=totals(R),ph=playedHoles(R);
+  const top=R.players.slice().sort((a,b)=>t[b.id].money-t[a.id].money)[0];
+  const lead=ph&&t[top.id].money>0?`${esc(top.name)} ${money(t[top.id].money,true)}`:'All square';
+  return {ph,lead};
+}
+function vGames(){
+  return `
+  <header><div><h1>Stymies</h1><div class="sub">${S.games.length} game${S.games.length===1?'':'s'} going</div></div>
+    <div class="hbtns"><button class="small ghost" data-act="history">Past games (${S.history.length})</button></div></header>
+  ${S.games.map(g=>{const s=gameSummary(g);return `
+  <div class="card gcard ${g.id===S.active?'cur':''}">
+    <button class="gopen" data-act="open" data-id="${g.id}">
+      <div class="gtop"><b>${esc(g.name)}</b><span class="note" style="margin:0">Hole ${g.cur+1}</span></div>
+      <div class="note" style="margin:4px 0 0">${g.players.map(p=>esc(p.name)).join(', ')} · ${money(g.rate)} a stroke</div>
+      <div class="note" style="margin:4px 0 0;color:var(--text)">${s.ph} hole${s.ph===1?'':'s'} in · ${s.lead}</div>
+    </button>
+    <div class="btnrow"><button class="small" data-act="open" data-id="${g.id}">Open</button><button class="small danger" data-act="delgame" data-id="${g.id}">Delete</button></div>
+  </div>`}).join('')}
+  <button class="primary" data-act="newsetup">Start another game</button>
+  <p class="note" style="text-align:center">Every game saves as you go. Delete throws a game away without saving it to Past games.</p>`;
 }
 
 function vSetup(){
   const n=S.names.filter(x=>x.trim()).length;
   return `
   <header><div><h1>Stymies</h1><div class="sub">On the putting green, gross strokes, no handicaps</div></div>
-    <div class="hbtns"><button class="small ghost" data-act="history">Past games (${S.history.length})</button></div></header>
-  <div class="card"><p class="note" style="margin:0;color:var(--text)">Play as many holes as you like and stop whenever the group agrees. Every hole adds to a running stroke total, and you pay everyone ahead of you for each stroke you are behind them.</p></div>
+    <div class="hbtns">${S.games.length?`<button class="small" data-act="games">Games (${S.games.length})</button>`:''}<button class="small ghost" data-act="history">Past games (${S.history.length})</button></div></header>
+  ${S.games.length?'':'<div class="card"><p class="note" style="margin:0;color:var(--text)">Play as many holes as you like and stop whenever the group agrees. Every hole adds to a running stroke total, and you pay everyone ahead of you for each stroke you are behind them.</p></div>'}
+  <div class="card"><div class="label">Game name</div>
+    <input type="text" id="gname" placeholder="Game ${S.seq+1}" value="${esc(S.gname)}" autocomplete="off" autocapitalize="words">
+    <p class="note">Optional. Helps you tell games apart when more than one is going.</p>
+  </div>
   <div class="card"><div class="label">Players <span>${n}</span></div>
     ${S.names.map((nm,i)=>`<div class="prow"><input type="text" data-name="${i}" placeholder="Player ${i+1}" value="${esc(nm)}" autocomplete="off" autocapitalize="words"><button data-act="rm" data-i="${i}" aria-label="Remove">×</button></div>`).join('')}
     <button data-act="addname" style="width:100%">Add a player</button>
@@ -232,8 +284,8 @@ function vPlay(){
   const lead=Math.min(...R.players.map(p=>t[p.id].strokes));
   const next=order.find(id=>sc[id]===undefined);
   return `
-  <header><div><h1>Stymies</h1><div class="sub">${playedHoles(R)} hole${playedHoles(R)===1?'':'s'}, ${money(R.rate)} a stroke</div></div>
-    <div class="hbtns"><button class="small" data-act="settle">Settle</button></div></header>
+  <header><div><h1>${esc(R.name)}</h1><div class="sub">${playedHoles(R)} hole${playedHoles(R)===1?'':'s'}, ${money(R.rate)} a stroke</div></div>
+    <div class="hbtns"><button class="small ghost" data-act="games">Games (${S.games.length})</button><button class="small" data-act="settle">Settle</button></div></header>
   <div class="holebar">
     <div class="hn"><div class="k">Hole</div><div class="v">${h+1}</div></div>
     <div><div class="k">Putted</div><div class="v">${putted} / ${active}</div></div>
@@ -289,8 +341,8 @@ function vSettle(){
     <tr><td><b>Total</b></td>${R.players.map(p=>`<td class="r"><b>${t[p.id].strokes}</b></td>`).join('')}</tr></table>`:'<div class="empty">No holes putted yet.</div>'}
   </div>
   <button class="primary" data-act="again">Save &amp; play again, same group</button>
-  <div class="btnrow"><button data-act="newgame">Save &amp; set up a new game</button></div>
-  <p class="note" style="text-align:center">Both save this round to Past games, then clear the scores and money.</p>`;
+  <div class="btnrow"><button data-act="newgame">Save &amp; finish this game</button></div>
+  <p class="note" style="text-align:center">Both save this round to Past games. Play again clears the scores and money and keeps the group; finish takes the game off your list. Other games aren't touched.</p>`;
 }
 
 function vHistory(){
@@ -300,7 +352,7 @@ function vHistory(){
   <div class="card">
   ${S.history.length?S.history.map(g=>{
     const top=g.players.slice().sort((a,b)=>b.money-a.money)[0];
-    return `<div class="hist"><div><b>${new Date(g.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</b>
+    return `<div class="hist"><div><b>${g.name?esc(g.name)+' · ':''}${new Date(g.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</b>
       <div class="note" style="margin:2px 0 0">${g.holes} hole${g.holes===1?'':'s'}, ${money(g.rate)} a stroke · ${g.players.map(p=>esc(p.name)).join(', ')}</div>
       ${g.payments.length?`<div class="note" style="margin:4px 0 0">${g.payments.map(x=>`${esc(x.from)} → ${esc(x.to)} ${money(x.amt)}`).join(' · ')}</div>`:''}</div>
       <div style="text-align:right;white-space:nowrap"><b class="pos">${money(top.money,true)}</b><div class="note" style="margin:2px 0 0">${esc(top.name)}</div></div></div>`}).join(''):'<div class="empty">No saved games yet.</div>'}
@@ -318,6 +370,8 @@ function bind(){
   }));
   const rate=document.getElementById('rate');
   if(rate)rate.addEventListener('input',e=>{const v=parseFloat(e.target.value);S.rate=isFinite(v)&&v>=0?v:0;save();document.getElementById('ratenote').textContent=`Lose a hole by two strokes to somebody and you owe them ${money(S.rate*2)}.`});
+  const gn=document.getElementById('gname');
+  if(gn)gn.addEventListener('input',e=>{S.gname=e.target.value;save()});
   const np=document.getElementById('newp');
   if(np)np.addEventListener('keydown',e=>{if(e.key==='Enter')act('addp')});
 }
@@ -337,7 +391,11 @@ function act(a,b){
       S.names.map(x=>x.trim()).filter(Boolean).forEach(nm=>{let n=nm,k=2;while(seen.has(n.toLowerCase()))n=nm+' '+k++;seen.add(n.toLowerCase());players.push({id:uid(),name:n})});
       if(players.length<2)return;
       S.names=players.map(p=>p.name);
-      startRound(players);break;}
+      S.seq++;
+      let gname=S.gname.trim()||('Game '+S.seq);
+      {let base=gname,k=2;while(S.games.some(g=>g.name.toLowerCase()===gname.toLowerCase()))gname=base+' '+k++;}
+      S.gname='';
+      startRound(players,{name:gname});break;}
     case 'putt':{const id=b.dataset.id,n=+b.dataset.n,sc=R.holes[R.cur];sc[id]=sc[id]===n?undefined:n;if(sc[id]===undefined)delete sc[id];save();render();nextUp();break;}
     case 'big':{const id=b.dataset.id,sc=R.holes[R.cur];sc[id]=isNum(sc[id])&&sc[id]>MAXQUICK?sc[id]+1:7;save();render();toast('Tap again to add a stroke');break;}
     case 'out':{const id=b.dataset.id,sc=R.holes[R.cur];if(sc[id]==='out')delete sc[id];else sc[id]='out';save();render();break;}
@@ -358,10 +416,14 @@ function act(a,b){
     case 'settle':view='settle';render();window.scrollTo(0,0);break;
     case 'back':view='play';render();break;
     case 'again':playAgain();window.scrollTo(0,0);break;
-    case 'newgame':newGame();window.scrollTo(0,0);toast(playedHoles(R)?'Game saved.':'Ready for a new game.');break;
+    case 'newgame':{const had=playedHoles(R);finishGame();window.scrollTo(0,0);toast(had?'Game saved to Past games.':'Game closed.');break;}
+    case 'games':view='games';render();window.scrollTo(0,0);break;
+    case 'open':openGame(b.dataset.id);break;
+    case 'newsetup':S.names=['','','',''];newSetup();break;
+    case 'delgame':{const id=b.dataset.id;arm('del'+id,()=>deleteGame(id),b);break;}
     case 'reset':arm('reset',resetRound,b);break;
     case 'history':view='history';render();break;
-    case 'home':view=S.round?'play':'setup';render();break;
+    case 'home':view=S.round?'play':(S.games.length?'games':'setup');render();break;
     case 'clearhist':arm('clearhist',()=>{S.history=[];save();render()},b);break;
   }
 }
