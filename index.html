@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D1411">
+<title>Stymies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D1411;--card:#15201B;--card2:#1B2822;--line:#26362E;--text:#EEF3EF;--muted:#8FA398;
+  --green:#5FC48A;--green-d:#2E7D52;--gold:#E2C178;--red:#E8806E;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:16px}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 90px) env(safe-area-inset-left)}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+h1{font-family:Fraunces,Georgia,serif;font-size:28px;margin:0}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:6px 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.hbtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.note{color:var(--muted);font-size:13px;line-height:1.45;margin:8px 0 0}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:10px 12px;font-weight:600}
+button:active{transform:scale(.97)}
+button.primary{background:var(--green);color:#08130D;border-color:var(--green);width:100%;padding:14px;font-size:17px}
+button.primary:disabled{opacity:.4}
+button.ghost{background:transparent}
+button.small{padding:7px 11px;font-size:14px}
+button.danger{border-color:#5a2e27;color:var(--red)}
+button.danger.armed{background:var(--red);color:#1a0a07;border-color:var(--red)}
+input[type=text],input[type=number]{width:100%;font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px}
+input:focus{outline:2px solid var(--green-d)}
+.prow{display:flex;gap:8px;margin-bottom:8px}
+.prow button{width:46px;flex:none}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.toggle:first-of-type{border-top:0}
+.sw{width:50px;height:30px;border-radius:15px;background:var(--line);position:relative;flex:none;border:0;padding:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#cfd8d2;transition:.15s}
+.sw.on{background:var(--green-d)}.sw.on::after{left:23px;background:#fff}
+.holebar{display:grid;grid-template-columns:auto 1fr 1fr;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px}
+.holebar>div{padding:10px 14px;background:var(--card)}
+.holebar .hn{background:var(--green);color:#08130D;text-align:center;min-width:76px}
+.holebar .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;opacity:.8}
+.holebar .v{font-family:Fraunces,Georgia,serif;font-size:24px}
+.hn .v{font-size:34px;line-height:1}
+.player{padding:12px 0;border-top:1px solid var(--line)}
+.player:first-child{border-top:0;padding-top:2px}
+.ptop{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.pname{font-weight:700;font-size:17px}
+.pname .ord{color:var(--muted);font-weight:500;font-size:13px;margin-right:6px}
+.pmeta{font-size:13px;color:var(--muted);display:flex;gap:10px;align-items:center}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.putts{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.putts button{padding:12px 0;font-size:17px}
+.putts button.sel{background:var(--green);color:#08130D;border-color:var(--green)}
+.outbtn{font-size:13px;padding:5px 10px}
+.outbtn.sel{background:var(--gold);color:#1d1606;border-color:var(--gold)}
+.player.isout .putts{opacity:.3;pointer-events:none}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:600;padding:6px 4px}
+td{padding:9px 4px;border-top:1px solid var(--line)}
+td.r,th.r{text-align:right}
+.navbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding:18px 16px calc(env(safe-area-inset-bottom) + 14px)}
+.navbar .in{max-width:520px;margin:0 auto;display:flex;gap:10px}
+.navbar .in button{padding:14px}
+.navbar .grow{flex:1}
+.pay{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:16px}
+.pay:first-child{border-top:0}
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#EEF3EF;color:#0D1411;padding:9px 14px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.scroll{overflow-x:auto}
+.empty{color:var(--muted);text-align:center;padding:20px 0}
+.hist{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.hist:first-child{border-top:0}
+.btnrow{display:flex;gap:8px;margin-top:10px}
+.btnrow button{flex:1}
+.addrow{display:flex;gap:8px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+const KEY='stymies.v1';
+const MAXQUICK=6;
+let S=load()||fresh();
+let view=S.round?'play':'setup';
+let armed=null, armTimer=null;
+
+function fresh(){return{names:['','','',''],rate:1,draw:true,honors:true,round:null,history:[]}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));return s&&s.names?s:null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function money(n,sign){const a=Math.abs(n);const s='$'+(Number.isInteger(a)?a:a.toFixed(2));if(!sign)return s;return n>0?'+'+s:n<0?'−'+s:s}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// ---------- round logic ----------
+function startRound(players){
+  const order=S.draw?shuffle(players.map(p=>p.id)):players.map(p=>p.id);
+  S.round={id:uid(),started:Date.now(),rate:S.rate,honors:S.honors,players,startOrder:order,holes:[{}],cur:0};
+  save();view='play';render();
+  const first=players.find(p=>p.id===order[0]);
+  toast(first.name+' putts first.');
+}
+function isNum(v){return typeof v==='number'}
+function holeOrder(R,h){
+  // order on hole h
+  let order=R.startOrder.filter(id=>R.players.some(p=>p.id===id));
+  R.players.forEach(p=>{if(!order.includes(p.id))order.push(p.id)});
+  if(!R.honors)return order;
+  for(let k=0;k<h;k++){
+    const sc=R.holes[k]||{};
+    order=order.map((id,i)=>({id,i,v:isNum(sc[id])?sc[id]:Infinity}))
+      .sort((a,b)=>a.v-b.v||a.i-b.i).map(x=>x.id);
+  }
+  return order;
+}
+function totals(R){
+  const t={};R.players.forEach(p=>t[p.id]={strokes:0,holes:0,money:0});
+  R.holes.forEach(sc=>{
+    const ids=R.players.map(p=>p.id).filter(id=>isNum(sc[id]));
+    ids.forEach(id=>{t[id].strokes+=sc[id];t[id].holes++});
+    for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
+      const a=ids[i],b=ids[j],d=(sc[b]-sc[a])*R.rate;
+      t[a].money+=d;t[b].money-=d;
+    }
+  });
+  return t;
+}
+function settle(t){
+  const cred=[],debt=[];
+  Object.entries(t).forEach(([id,v])=>{const m=Math.round(v.money*100);if(m>0)cred.push({id,m});else if(m<0)debt.push({id,m:-m})});
+  cred.sort((a,b)=>b.m-a.m);debt.sort((a,b)=>b.m-a.m);
+  const out=[];let i=0,j=0;
+  while(i<debt.length&&j<cred.length){
+    const x=Math.min(debt[i].m,cred[j].m);
+    out.push({from:debt[i].id,to:cred[j].id,amt:x/100});
+    debt[i].m-=x;cred[j].m-=x;
+    if(!debt[i].m)i++;if(!cred[j].m)j++;
+  }
+  return out;
+}
+function playedHoles(R){return R.holes.filter(sc=>Object.values(sc).some(isNum)).length}
+function nameOf(R,id){const p=R.players.find(p=>p.id===id);return p?p.name:'?'}
+
+function archive(){
+  const R=S.round;if(!R)return;
+  if(playedHoles(R)===0)return;
+  const t=totals(R);
+  S.history.unshift({
+    date:Date.now(),rate:R.rate,holes:playedHoles(R),
+    players:R.players.map(p=>({name:p.name,strokes:t[p.id].strokes,money:t[p.id].money})),
+    payments:settle(t).map(x=>({from:nameOf(R,x.from),to:nameOf(R,x.to),amt:x.amt}))
+  });
+  S.history=S.history.slice(0,50);
+}
+function playAgain(){
+  const R=S.round;archive();
+  const players=R.players.map(p=>({id:p.id,name:p.name}));
+  S.rate=R.rate;
+  startRound(players);
+}
+function newGame(){
+  const R=S.round;archive();
+  if(R){S.names=R.players.map(p=>p.name);S.rate=R.rate}
+  S.round=null;save();view='setup';render();
+}
+function resetRound(){
+  const R=S.round;
+  R.holes=[{}];R.cur=0;R.started=Date.now();
+  if(S.draw)R.startOrder=shuffle(R.players.map(p=>p.id));
+  save();view='play';render();
+  toast('Scores cleared. '+nameOf(R,holeOrder(R,0)[0])+' putts first.');
+}
+
+// two-tap confirm for destructive buttons (no browser dialogs)
+function arm(key,fn,btn){
+  if(armed===key){armed=null;clearTimeout(armTimer);fn();return}
+  armed=key;clearTimeout(armTimer);
+  document.querySelectorAll('.armed').forEach(b=>{b.classList.remove('armed');b.textContent=b.dataset.label});
+  btn.dataset.label=btn.dataset.label||btn.textContent;
+  btn.classList.add('armed');btn.textContent='Tap again to confirm';
+  armTimer=setTimeout(()=>{armed=null;btn.classList.remove('armed');btn.textContent=btn.dataset.label},3000);
+}
+
+// ---------- views ----------
+function render(){
+  const app=document.getElementById('app');
+  armed=null;
+  if(view==='setup')app.innerHTML=vSetup();
+  else if(view==='play')app.innerHTML=vPlay();
+  else if(view==='settle')app.innerHTML=vSettle();
+  else if(view==='history')app.innerHTML=vHistory();
+  bind();
+}
+
+function vSetup(){
+  const n=S.names.filter(x=>x.trim()).length;
+  return `
+  <header><div><h1>Stymies</h1><div class="sub">On the putting green, gross strokes, no handicaps</div></div>
+    <div class="hbtns"><button class="small ghost" data-act="history">Past games (${S.history.length})</button></div></header>
+  <div class="card"><p class="note" style="margin:0;color:var(--text)">Play as many holes as you like and stop whenever the group agrees. Every hole adds to a running stroke total, and you pay everyone ahead of you for each stroke you are behind them.</p></div>
+  <div class="card"><div class="label">Players <span>${n}</span></div>
+    ${S.names.map((nm,i)=>`<div class="prow"><input type="text" data-name="${i}" placeholder="Player ${i+1}" value="${esc(nm)}" autocomplete="off" autocapitalize="words"><button data-act="rm" data-i="${i}" aria-label="Remove">×</button></div>`).join('')}
+    <button data-act="addname" style="width:100%">Add a player</button>
+  </div>
+  <div class="card"><div class="label">$ per stroke</div>
+    <input type="number" inputmode="decimal" min="0" step="0.25" id="rate" value="${S.rate}">
+    <p class="note" id="ratenote">Lose a hole by two strokes to somebody and you owe them ${money(S.rate*2)}.</p>
+  </div>
+  <div class="card">
+    <div class="toggle"><div><b>Draw for the first hole</b><p class="note">Shuffle the order on the green when you start.</p></div><button class="sw ${S.draw?'on':''}" data-act="tdraw" aria-label="Draw"></button></div>
+    <div class="toggle"><div><b>Honors after that</b><p class="note">Each hole reorders by the hole before it, low putts first.</p></div><button class="sw ${S.honors?'on':''}" data-act="thonors" aria-label="Honors"></button></div>
+  </div>
+  <button class="primary" data-act="start" ${n<2?'disabled':''}>Start putting</button>
+  ${n<2?'<p class="note" style="text-align:center">Add at least two names.</p>':''}`;
+}
+
+function vPlay(){
+  const R=S.round,h=R.cur,sc=R.holes[h]||{},t=totals(R);
+  const order=holeOrder(R,h);
+  const putted=order.filter(id=>isNum(sc[id])).length;
+  const active=order.filter(id=>sc[id]!=='out').length;
+  const ranked=R.players.slice().sort((a,b)=>t[b.id].money-t[a.id].money||t[a.id].strokes-t[b.id].strokes);
+  const even=new Set(R.players.map(p=>t[p.id].holes)).size<=1;
+  const lead=Math.min(...R.players.map(p=>t[p.id].strokes));
+  const next=order.find(id=>sc[id]===undefined);
+  return `
+  <header><div><h1>Stymies</h1><div class="sub">${playedHoles(R)} hole${playedHoles(R)===1?'':'s'}, ${money(R.rate)} a stroke</div></div>
+    <div class="hbtns"><button class="small" data-act="settle">Settle</button></div></header>
+  <div class="holebar">
+    <div class="hn"><div class="k">Hole</div><div class="v">${h+1}</div></div>
+    <div><div class="k">Putted</div><div class="v">${putted} / ${active}</div></div>
+    <div><div class="k">Per stroke</div><div class="v">${money(R.rate)}</div></div>
+  </div>
+  <div class="card">
+    ${order.map((id,i)=>{
+      const p=R.players.find(x=>x.id===id),v=sc[id],out=v==='out';
+      return `<div class="player ${out?'isout':''}">
+        <div class="ptop"><div class="pname"><span class="ord">${i+1}</span>${esc(p.name)}</div>
+          <div class="pmeta"><span>${t[id].strokes} str</span><span class="${t[id].money>0?'pos':t[id].money<0?'neg':''}">${money(t[id].money,true)}</span>
+          <button class="outbtn ${out?'sel':''}" data-act="out" data-id="${id}">${out?'Sat out':'Out'}</button></div></div>
+        <div class="putts">
+          ${[1,2,3,4,5,6].map(n=>`<button class="${v===n?'sel':''}" data-act="putt" data-id="${id}" data-n="${n}">${n}</button>`).join('')}
+          <button class="${isNum(v)&&v>MAXQUICK?'sel':''}" data-act="big" data-id="${id}">${isNum(v)&&v>MAXQUICK?v:'7+'}</button>
+        </div></div>`}).join('')}
+    <div class="addrow"><input type="text" id="newp" placeholder="Add a player mid-round" autocapitalize="words"><button data-act="addp" style="flex:none">Add</button></div>
+  </div>
+  <div class="card"><div class="label">Leaderboard <span>${playedHoles(R)} hole${playedHoles(R)===1?'':'s'} in</span></div>
+    <table><tr><th>Player</th><th class="r">Strokes</th><th class="r">${even?'Back':'Holes'}</th><th class="r">Money</th></tr>
+    ${ranked.map((p,i)=>`<tr><td>${i+1}. ${esc(p.name)}</td><td class="r">${t[p.id].strokes}</td><td class="r">${even?(t[p.id].strokes===lead?'leader':'+'+(t[p.id].strokes-lead)):t[p.id].holes}</td><td class="r ${t[p.id].money>0?'pos':t[p.id].money<0?'neg':''}">${money(t[p.id].money,true)}</td></tr>`).join('')}
+    </table>
+    ${even?'':'<p class="note">Not everyone has played the same holes, so this is ranked on money. Each pair only settles the holes they both putted.</p>'}
+  </div>
+  <div class="card"><div class="label">Round</div>
+    <div class="btnrow"><button class="danger" data-act="reset">Restart this round</button></div>
+    <p class="note">Clears every score and starts again at hole 1 with the same players. Nothing is saved.</p>
+  </div>
+  <div class="navbar"><div class="in">
+    <button data-act="prev" ${h===0?'disabled style="opacity:.35"':''} aria-label="Previous hole">‹</button>
+    <button class="grow" data-act="next">${h<R.holes.length-1?'Hole '+(h+2)+' ›':'New hole ›'}</button>
+  </div></div>`;
+}
+
+function vSettle(){
+  const R=S.round,t=totals(R),pays=settle(t);
+  const ranked=R.players.slice().sort((a,b)=>t[b.id].money-t[a.id].money);
+  const holes=R.holes.map((sc,i)=>({sc,i})).filter(x=>Object.values(x.sc).some(isNum));
+  return `
+  <header><div><h1>Settle up</h1><div class="sub">${holes.length} hole${holes.length===1?'':'s'} at ${money(R.rate)} a stroke</div></div>
+    <div class="hbtns"><button class="small" data-act="back">Back to the green</button></div></header>
+  <div class="card"><div class="label">Final</div>
+    <table><tr><th>Player</th><th class="r">Strokes</th><th class="r">Money</th></tr>
+    ${ranked.map((p,i)=>`<tr><td>${i+1}. ${esc(p.name)}</td><td class="r">${t[p.id].strokes}</td><td class="r ${t[p.id].money>0?'pos':t[p.id].money<0?'neg':''}">${money(t[p.id].money,true)}</td></tr>`).join('')}
+    </table></div>
+  <div class="card"><div class="label">Who pays who <span>${pays.length} payment${pays.length===1?'':'s'}</span></div>
+    ${pays.length?pays.map(x=>`<div class="pay"><span>${esc(nameOf(R,x.from))} → ${esc(nameOf(R,x.to))}</span><b>${money(x.amt)}</b></div>`).join(''):'<div class="empty">All square. Nobody owes anything.</div>'}
+    ${pays.length?'<p class="note">Fewest possible hand-offs. Everyone ends on the number above.</p>':''}
+  </div>
+  <div class="card scroll"><div class="label">Card</div>
+    ${holes.length?`<table><tr><th>Hole</th>${R.players.map(p=>`<th class="r">${esc(p.name)}</th>`).join('')}</tr>
+    ${holes.map(({sc,i})=>`<tr><td>${i+1}</td>${R.players.map(p=>`<td class="r">${isNum(sc[p.id])?sc[p.id]:'–'}</td>`).join('')}</tr>`).join('')}
+    <tr><td><b>Total</b></td>${R.players.map(p=>`<td class="r"><b>${t[p.id].strokes}</b></td>`).join('')}</tr></table>`:'<div class="empty">No holes putted yet.</div>'}
+  </div>
+  <button class="primary" data-act="again">Save &amp; play again, same group</button>
+  <div class="btnrow"><button data-act="newgame">Save &amp; set up a new game</button></div>
+  <p class="note" style="text-align:center">Both save this round to Past games, then clear the scores and money.</p>`;
+}
+
+function vHistory(){
+  return `
+  <header><div><h1>Past games</h1><div class="sub">Stymies on the putting green</div></div>
+    <div class="hbtns"><button class="small" data-act="home">Done</button></div></header>
+  <div class="card">
+  ${S.history.length?S.history.map(g=>{
+    const top=g.players.slice().sort((a,b)=>b.money-a.money)[0];
+    return `<div class="hist"><div><b>${new Date(g.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</b>
+      <div class="note" style="margin:2px 0 0">${g.holes} hole${g.holes===1?'':'s'}, ${money(g.rate)} a stroke · ${g.players.map(p=>esc(p.name)).join(', ')}</div>
+      ${g.payments.length?`<div class="note" style="margin:4px 0 0">${g.payments.map(x=>`${esc(x.from)} → ${esc(x.to)} ${money(x.amt)}`).join(' · ')}</div>`:''}</div>
+      <div style="text-align:right;white-space:nowrap"><b class="pos">${money(top.money,true)}</b><div class="note" style="margin:2px 0 0">${esc(top.name)}</div></div></div>`}).join(''):'<div class="empty">No saved games yet.</div>'}
+  </div>
+  ${S.history.length?'<button class="danger" data-act="clearhist" style="width:100%">Clear past games</button>':''}`;
+}
+
+// ---------- events ----------
+function bind(){
+  document.querySelectorAll('[data-name]').forEach(inp=>inp.addEventListener('input',e=>{
+    S.names[+e.target.dataset.name]=e.target.value;save();
+    const n=S.names.filter(x=>x.trim()).length;
+    const b=document.querySelector('[data-act=start]');if(b)b.disabled=n<2;
+    const l=document.querySelector('.label span');if(l)l.textContent=n;
+  }));
+  const rate=document.getElementById('rate');
+  if(rate)rate.addEventListener('input',e=>{const v=parseFloat(e.target.value);S.rate=isFinite(v)&&v>=0?v:0;save();document.getElementById('ratenote').textContent=`Lose a hole by two strokes to somebody and you owe them ${money(S.rate*2)}.`});
+  const np=document.getElementById('newp');
+  if(np)np.addEventListener('keydown',e=>{if(e.key==='Enter')act('addp')});
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  act(b.dataset.act,b);
+});
+function act(a,b){
+  const R=S.round;
+  switch(a){
+    case 'rm':S.names.splice(+b.dataset.i,1);if(S.names.length<2)S.names.push('');save();render();break;
+    case 'addname':S.names.push('');save();render();{const ins=document.querySelectorAll('[data-name]');ins[ins.length-1].focus()}break;
+    case 'tdraw':S.draw=!S.draw;save();render();break;
+    case 'thonors':S.honors=!S.honors;save();render();break;
+    case 'start':{
+      const seen=new Set();const players=[];
+      S.names.map(x=>x.trim()).filter(Boolean).forEach(nm=>{let n=nm,k=2;while(seen.has(n.toLowerCase()))n=nm+' '+k++;seen.add(n.toLowerCase());players.push({id:uid(),name:n})});
+      if(players.length<2)return;
+      S.names=players.map(p=>p.name);
+      startRound(players);break;}
+    case 'putt':{const id=b.dataset.id,n=+b.dataset.n,sc=R.holes[R.cur];sc[id]=sc[id]===n?undefined:n;if(sc[id]===undefined)delete sc[id];save();render();nextUp();break;}
+    case 'big':{const id=b.dataset.id,sc=R.holes[R.cur];sc[id]=isNum(sc[id])&&sc[id]>MAXQUICK?sc[id]+1:7;save();render();toast('Tap again to add a stroke');break;}
+    case 'out':{const id=b.dataset.id,sc=R.holes[R.cur];if(sc[id]==='out')delete sc[id];else sc[id]='out';save();render();break;}
+    case 'addp':{const inp=document.getElementById('newp');const nm=inp.value.trim();if(!nm)return;
+      if(R.players.some(p=>p.name.toLowerCase()===nm.toLowerCase())){toast('That name is already in');return}
+      const p={id:uid(),name:nm};R.players.push(p);R.startOrder.push(p.id);save();render();toast(nm+' joins on hole '+(R.cur+1));break;}
+    case 'prev':if(R.cur>0){R.cur--;save();render();window.scrollTo(0,0)}break;
+    case 'next':{
+      const sc=R.holes[R.cur];
+      const missing=holeOrder(R,R.cur).filter(id=>sc[id]===undefined);
+      if(R.cur===R.holes.length-1){
+        if(!Object.values(sc).some(isNum)){toast('Enter putts for this hole first');return}
+        if(missing.length){toast(missing.map(id=>nameOf(R,id)).join(', ')+' still to putt');return}
+        R.holes.push({});
+      }
+      R.cur++;save();render();window.scrollTo(0,0);
+      toast(nameOf(R,holeOrder(R,R.cur)[0])+' has the honor.');break;}
+    case 'settle':view='settle';render();window.scrollTo(0,0);break;
+    case 'back':view='play';render();break;
+    case 'again':playAgain();window.scrollTo(0,0);break;
+    case 'newgame':newGame();window.scrollTo(0,0);toast(playedHoles(R)?'Game saved.':'Ready for a new game.');break;
+    case 'reset':arm('reset',resetRound,b);break;
+    case 'history':view='history';render();break;
+    case 'home':view=S.round?'play':'setup';render();break;
+    case 'clearhist':arm('clearhist',()=>{S.history=[];save();render()},b);break;
+  }
+}
+function nextUp(){
+  const R=S.round,sc=R.holes[R.cur];
+  const left=holeOrder(R,R.cur).filter(id=>sc[id]===undefined);
+  if(!left.length)toast('Hole done. Tap New hole.');
+}
+render();
+})();
+</script>
+</body>
+</html>
